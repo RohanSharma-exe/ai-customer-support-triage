@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 from app.models.ticket import Ticket
 from app.models.prediction import Prediction
 from app.schemas.ticket_schema import TicketCreate
@@ -67,3 +68,31 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
 
     # Return ticket; draft can be returned via a read endpoint later
     return ticket
+
+def resolve_ticket(db: Session, ticket_id: int) -> Ticket:
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+
+    if not ticket:
+        return None
+
+    ticket.status = "RESOLVED"
+    ticket.resolved_at = datetime.now(timezone.utc)
+
+    # 🔑 Normalize created_at to UTC-aware
+    ticket.created_at = ticket.created_at.replace(tzinfo=timezone.utc)
+
+    # Compute resolution time
+    resolution_delta = ticket.resolved_at - ticket.created_at
+    ticket.resolution_time_hours = resolution_delta.total_seconds() / 3600
+
+    # SLA check
+    if ticket.sla_hours and ticket.resolution_time_hours > ticket.sla_hours:
+        ticket.sla_breached = True
+    else:
+        ticket.sla_breached = False
+
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket
+

@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
+
 
 
 # --------- Request Schema (Incoming Ticket) ---------
@@ -9,6 +11,11 @@ class TicketCreate(BaseModel):
     order_id: Optional[str] = None
     issue_text: str
 
+# --------- Resolved Schema ---------
+
+class TicketResolve(BaseModel):
+    resolved: bool = True
+    
 
 # --------- Response Schema (What API Returns) ---------
 
@@ -29,6 +36,11 @@ class TicketResponse(BaseModel):
 
     # Routing
     assigned_agent_id: Optional[int]
+
+    # SLA Tracking
+    resolved_at: Optional[datetime]
+    resolution_time_hours: Optional[float]
+    sla_breached: Optional[bool]
 
     # Ticket Lifecycle
     status: str

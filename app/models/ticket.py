@@ -27,3 +27,5 @@ class Ticket(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolution_time_hours = Column(Float, nullable=True)
+    sla_breached = Column(Boolean, default=False)
