@@ -3,6 +3,7 @@ from app.models.ticket import Ticket
 from app.models.prediction import Prediction
 from app.schemas.ticket_schema import TicketCreate
 from app.services.decision_service import analyze_ticket_text
+from app.services.routing_service import route_ticket
 
 def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
     ticket = Ticket(
@@ -34,6 +35,20 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
     )
 
     db.add(prediction)
+    db.commit()
+
+    # Routing Engine
+    agent, routing_reason = route_ticket(
+        db=db,
+        intent=decision["intent"],
+        priority=decision["priority"],
+        sla_risk=decision["sla_risk"]
+    )
+
+    if agent:
+        ticket.assigned_agent_id = agent.id
+        agent.active_tickets += 1
+
     db.commit()
     db.refresh(ticket)
 
