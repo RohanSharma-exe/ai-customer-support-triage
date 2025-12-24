@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.ticket import Ticket
+from app.models.prediction import Prediction
 from app.schemas.ticket_schema import TicketCreate
 from app.services.decision_service import analyze_ticket_text
 
@@ -15,12 +16,24 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
     db.commit()
     db.refresh(ticket)
 
-    # AI Understanding Layer
-    ai_result = analyze_ticket_text(ticket.issue_text)
-    ticket.intent = ai_result["intent"]
-    ticket.sentiment = ai_result["sentiment"]
-    ticket.urgency = ai_result["urgency"]
+    # Decision Engine
+    decision = analyze_ticket_text(ticket.issue_text)
 
+    ticket.intent = decision["intent"]
+    ticket.sentiment = decision["sentiment"]
+    ticket.urgency = decision["urgency"]
+    ticket.priority = decision["priority"]
+
+    prediction = Prediction(
+        ticket_id=ticket.id,
+        model_version="v1-rule-based",
+        predicted_priority=decision["priority"],
+        sla_risk_score=decision["sla_risk"],
+        confidence=0.8,
+        explanation=f"Intent={decision['intent']}, Urgency={decision['urgency']}, Sentiment={decision['sentiment']}"
+    )
+
+    db.add(prediction)
     db.commit()
     db.refresh(ticket)
 
