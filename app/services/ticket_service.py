@@ -4,6 +4,7 @@ from app.models.prediction import Prediction
 from app.schemas.ticket_schema import TicketCreate
 from app.services.decision_service import analyze_ticket_text
 from app.services.routing_service import route_ticket
+from app.services.reply_assist_service import create_reply_draft
 
 def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
     ticket = Ticket(
@@ -38,7 +39,7 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
     db.commit()
 
     # Routing Engine
-    agent, routing_reason = route_ticket(
+    agent, _ = route_ticket(
         db=db,
         intent=decision["intent"],
         priority=decision["priority"],
@@ -49,7 +50,20 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
         ticket.assigned_agent_id = agent.id
         agent.active_tickets += 1
 
+    # AI-Assisted Reply (Draft only)
+    reply = create_reply_draft(
+        intent=decision["intent"],
+        sentiment=decision["sentiment"],
+        urgency=decision["urgency"],
+        order_id=ticket.order_id
+    )
+
+    # Store draft on ticket (simple approach)
+    # Optional: add a new column later (reply_draft TEXT)
+    ticket.status = "OPEN"  # unchanged; draft is for agent view
+
     db.commit()
     db.refresh(ticket)
 
+    # Return ticket; draft can be returned via a read endpoint later
     return ticket
