@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.services.analytics_service import model_performance
 
 from app.db.session import SessionLocal
 from app.services.analytics_service import (
@@ -33,3 +34,7 @@ def get_high_risk_tickets(db: Session = Depends(get_db)):
 @router.get("/agents")
 def get_agent_workload(db: Session = Depends(get_db)):
     return agent_workload(db)
+
+@router.get("/model-performance")
+def get_model_performance(db: Session = Depends(get_db)):
+    return model_performance(db)

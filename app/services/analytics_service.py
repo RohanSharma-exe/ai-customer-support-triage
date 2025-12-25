@@ -45,3 +45,44 @@ def agent_workload(db: Session) -> list[dict]:
         }
         for a in agents
     ]
+
+def model_performance(db: Session, risk_threshold: float = 0.7) -> dict:
+    """
+    Evaluate SLA risk predictions against actual SLA outcomes.
+    """
+
+    predictions = (
+        db.query(Prediction, Ticket)
+        .join(Ticket, Ticket.id == Prediction.ticket_id)
+        .filter(Ticket.status == "RESOLVED")
+        .all()
+    )
+
+    tp = fp = fn = tn = 0
+
+    for pred, ticket in predictions:
+        predicted_high_risk = pred.sla_risk_score >= risk_threshold
+        actual_breach = ticket.sla_breached
+
+        if predicted_high_risk and actual_breach:
+            tp += 1
+        elif predicted_high_risk and not actual_breach:
+            fp += 1
+        elif not predicted_high_risk and actual_breach:
+            fn += 1
+        else:
+            tn += 1
+
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+
+    return {
+        "risk_threshold": risk_threshold,
+        "total_evaluated_tickets": len(predictions),
+        "true_positives": tp,
+        "false_positives": fp,
+        "false_negatives": fn,
+        "true_negatives": tn,
+        "precision": round(precision, 3),
+        "recall": round(recall, 3),
+    }
