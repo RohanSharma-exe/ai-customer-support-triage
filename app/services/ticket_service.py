@@ -32,7 +32,7 @@ def create_ticket(db: Session, ticket_data: TicketCreate) -> Ticket:
         model_version="v1-rule-based",
         predicted_priority=decision["priority"],
         sla_risk_score=decision["sla_risk"],
-        confidence=0.8,
+        confidence=decision["confidence"],
         explanation=f"Intent={decision['intent']}, Urgency={decision['urgency']}, Sentiment={decision['sentiment']}"
     )
 
@@ -96,3 +96,29 @@ def resolve_ticket(db: Session, ticket_id: int) -> Ticket:
 
     return ticket
 
+def override_ticket_priority(
+    db: Session,
+    ticket_id: int,
+    new_priority: str,
+    reason: str
+):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    prediction = (
+        db.query(Prediction)
+        .filter(Prediction.ticket_id == ticket_id)
+        .order_by(Prediction.id.desc())
+        .first()
+    )
+
+    if not ticket or not prediction:
+        return None
+
+    ticket.priority = new_priority
+
+    prediction.is_overridden = True
+    prediction.override_reason = reason
+
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket

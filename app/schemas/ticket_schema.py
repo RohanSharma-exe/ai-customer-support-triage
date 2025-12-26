@@ -47,3 +47,8 @@ class TicketResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TicketOverride(BaseModel):
+    new_priority: str
+    override_reason: str

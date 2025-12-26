@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Boolean, String, Float, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from app.db.session import Base
 
@@ -15,5 +15,8 @@ class Prediction(Base):
     confidence = Column(Float)
 
     explanation = Column(String)
+
+    is_overridden = Column(Boolean, default=False)
+    override_reason = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
